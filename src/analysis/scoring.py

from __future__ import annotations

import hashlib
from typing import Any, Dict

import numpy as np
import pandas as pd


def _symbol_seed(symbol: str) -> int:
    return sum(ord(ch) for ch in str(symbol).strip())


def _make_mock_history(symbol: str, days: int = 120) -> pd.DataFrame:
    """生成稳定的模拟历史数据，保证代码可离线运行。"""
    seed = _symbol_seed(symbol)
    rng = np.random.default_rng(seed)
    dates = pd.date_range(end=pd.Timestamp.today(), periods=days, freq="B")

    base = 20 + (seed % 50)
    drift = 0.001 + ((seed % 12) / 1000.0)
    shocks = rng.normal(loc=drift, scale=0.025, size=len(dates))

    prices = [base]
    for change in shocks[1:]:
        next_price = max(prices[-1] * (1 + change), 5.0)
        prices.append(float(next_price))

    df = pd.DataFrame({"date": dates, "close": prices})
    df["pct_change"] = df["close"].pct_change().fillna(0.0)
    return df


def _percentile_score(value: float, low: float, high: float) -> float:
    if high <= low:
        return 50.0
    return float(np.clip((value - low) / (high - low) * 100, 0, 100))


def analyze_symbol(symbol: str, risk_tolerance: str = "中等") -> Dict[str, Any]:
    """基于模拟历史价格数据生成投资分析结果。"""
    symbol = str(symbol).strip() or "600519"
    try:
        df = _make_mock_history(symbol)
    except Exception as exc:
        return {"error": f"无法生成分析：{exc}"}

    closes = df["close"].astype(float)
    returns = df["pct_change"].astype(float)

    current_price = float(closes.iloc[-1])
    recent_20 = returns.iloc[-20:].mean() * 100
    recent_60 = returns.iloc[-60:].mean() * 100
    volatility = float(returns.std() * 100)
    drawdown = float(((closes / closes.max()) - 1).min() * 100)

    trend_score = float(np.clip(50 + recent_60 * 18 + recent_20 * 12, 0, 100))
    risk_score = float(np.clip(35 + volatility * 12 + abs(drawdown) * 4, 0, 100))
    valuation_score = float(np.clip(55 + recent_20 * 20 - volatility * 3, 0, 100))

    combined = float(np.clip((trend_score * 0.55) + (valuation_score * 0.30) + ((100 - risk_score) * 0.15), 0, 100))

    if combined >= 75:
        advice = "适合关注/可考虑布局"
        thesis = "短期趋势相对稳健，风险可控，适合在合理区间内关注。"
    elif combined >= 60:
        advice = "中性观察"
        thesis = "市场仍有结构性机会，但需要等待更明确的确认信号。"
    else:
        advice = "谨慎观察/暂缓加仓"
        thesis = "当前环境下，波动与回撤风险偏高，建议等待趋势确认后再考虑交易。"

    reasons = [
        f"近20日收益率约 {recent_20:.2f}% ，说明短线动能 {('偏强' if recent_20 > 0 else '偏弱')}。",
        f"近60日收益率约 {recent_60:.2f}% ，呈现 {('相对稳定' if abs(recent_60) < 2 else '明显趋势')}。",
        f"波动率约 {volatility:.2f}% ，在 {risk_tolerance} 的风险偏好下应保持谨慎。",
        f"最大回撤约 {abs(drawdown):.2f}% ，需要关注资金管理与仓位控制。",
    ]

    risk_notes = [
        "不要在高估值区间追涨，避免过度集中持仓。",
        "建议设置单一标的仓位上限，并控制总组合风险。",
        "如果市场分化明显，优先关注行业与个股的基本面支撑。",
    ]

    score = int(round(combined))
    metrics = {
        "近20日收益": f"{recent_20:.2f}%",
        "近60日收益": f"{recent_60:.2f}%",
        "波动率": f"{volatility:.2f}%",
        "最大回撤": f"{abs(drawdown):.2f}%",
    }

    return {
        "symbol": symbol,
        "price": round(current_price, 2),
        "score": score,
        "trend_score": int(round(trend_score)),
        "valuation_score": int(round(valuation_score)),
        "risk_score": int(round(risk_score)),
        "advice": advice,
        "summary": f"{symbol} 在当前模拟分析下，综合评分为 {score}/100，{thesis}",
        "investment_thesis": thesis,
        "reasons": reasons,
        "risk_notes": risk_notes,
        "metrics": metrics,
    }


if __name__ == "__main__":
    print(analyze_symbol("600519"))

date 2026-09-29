@@ -1,0 +1,64 @@
+import streamlit as st
+import requests
+
+from src.analysis.scoring import analyze_symbol
+
+st.set_page_config(page_title="A 股投资助手", page_icon="📈", layout="wide")
+
+st.title("A 股投资助手")
+st.caption("轻量版投资分析助手：输入股票代码，生成趋势、风险与建议。")
+
+with st.sidebar:
+    st.header("参数")
+    symbol = st.text_input("股票代码", value="600519")
+    risk = st.selectbox("风险偏好", ["低风险", "中等", "高风险"])
+    btn = st.button("生成分析")
+
+if btn:
+    if not symbol:
+        st.warning("请输入股票代码")
+    else:
+        try:
+            payload = analyze_symbol(symbol, risk_tolerance=risk)
+            if payload.get("error"):
+                st.error(payload["error"])
+            else:
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("综合评分", f"{payload['score']}/100")
+                col2.metric("趋势评分", f"{payload['trend_score']}/100")
+                col3.metric("风险评分", f"{payload['risk_score']}/100")
+                col4.metric("当前价", f"¥{payload['price']:.2f}")
+
+                st.markdown(f"### 建议：{payload['advice']}")
+                st.info(payload["summary"])
+
+                tab1, tab2, tab3 = st.tabs(["投资结论", "要点说明", "风控提示"])
+
+                with tab1:
+                    st.write(payload["investment_thesis"])
+
+                with tab2:
+                    for item in payload["reasons"]:
+                        st.markdown(f"- {item}")
+
+                with tab3:
+                    for item in payload["risk_notes"]:
+                        st.markdown(f"- {item}")
+
+                st.markdown("---")
+                st.subheader("关键指标")
+                metrics = payload["metrics"]
+                metric_cols = st.columns(len(metrics))
+                for col, (k, v) in zip(metric_cols, metrics.items()):
+                    col.metric(k, v)
+
+        except Exception as exc:
+            st.error(f"分析失败：{exc}")
+            st.info("可在 Codespaces 中先启动后端：uvicorn src.app:app --reload --host 0.0.0.0 --port 8080")
+
+else:
+    st.markdown("### 使用说明")
+    st.markdown("- 输入股票代码，如 600519、000001")
+    st.markdown("- 点击“生成分析”后，程序会输出：趋势评分、风险评分、当前价和建议结论")
+    st.markdown("- 当前版本采用本地分析逻辑，便于在 iPad / Codespaces 中演示和开发")
+    st.markdown("- 若后续接入真实行情数据，可进一步增强估值与回测能力")

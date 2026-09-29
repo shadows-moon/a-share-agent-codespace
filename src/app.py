@@ -3,12 +3,12 @@ from pydantic import BaseModel
 
 from src.analysis.scoring import analyze_symbol
 
-app = FastAPI(title="A Share Investment Assistant")
+app = FastAPI(title="A 股投顾助手")
 
 
 class AdviceRequest(BaseModel):
     symbol: str
-    risk_tolerance: str = "medium"
+    risk_tolerance: str = "中等"
 
 
 @app.get("/health")
@@ -18,12 +18,10 @@ def health():
 
 @app.post("/api/advice")
 def get_advice(req: AdviceRequest):
-    """返回简化的股票分析结果。"""
-    result = analyze_symbol(req.symbol)
+    result = analyze_symbol(req.symbol, req.risk_tolerance)
     return result
 
 
 @app.post("/api/analyze")
 def analyze(req: AdviceRequest):
-    """接口别名，适合前端调用。"""
-    return analyze_symbol(req.symbol)
+    return analyze_symbol(req.symbol, req.risk_tolerance)
